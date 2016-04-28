@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+    <title>AngularJS Bootstrapping</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+</head>
+<body>
+    <div ng-controller="MyController">
+        {{ description }}<br>
+        <br>
+        version: {{ conf.version }}<br>
+        name: {{ conf.name }}<br>
+        host: {{ conf.host }}
+    </div>
+    <script>
+        var myapp = angular.module('MyApp', []);
+        
+        myapp.controller('MyController', ['$scope', 'config', function($scope, config) {
+            $scope.description = 'AngularJS bootstrapping with config file';
+            $scope.conf = config;
+        }]);
+        
+        function loadConfig() {
+            var initInjector = angular.injector(["ng"]);
+            var $http = initInjector.get("$http");
+
+            return $http.get('config.json').then(function(res) {
+                myapp.constant('config', res.data);
+            });
+        };
+
+        loadConfig().then(function() {
+            angular.element(document).ready(function() {
+                angular.bootstrap(document, ["MyApp"]);
+            });
+        });
+    </script>
+</body>
+</html>
