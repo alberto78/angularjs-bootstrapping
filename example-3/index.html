@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+    <title>AngularJS Bootstrapping</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
+</head>
+<body>
+    <div ng-controller="MyController">
+        {{ description }}<br>
+        <br>
+        global: {{ conf.global }}<br>
+        host: {{ conf.host }}<br>
+        data: {{ conf.data }}
+    </div>
+    <script>
+        // MYAPP
+        var myapp = angular.module('MyApp', []);
+        
+        myapp.controller('MyController', ['$scope', 'config', function($scope, config) {
+            $scope.description = 'AngularJS bootstrapping with factory, promise and multple files';
+            $scope.conf = config;
+        }]);
+        
+        function myappRun() {
+            angular.element(document).ready(function() {
+                angular.bootstrap(document, ["MyApp"]);
+            });
+        };
+        
+        // BOOTAPP
+        var bootapp = angular.module('bootstrapper', []);
+        
+        bootapp.factory('bootFactory', ['$http', '$q', function($http, $q) {
+            var factory = {};
+            factory.CFG = {};
+
+            factory.loadConfig = function(appName) {
+                var promises = [], 
+                    JSONconfigs = ['global', 'host', 'data'];
+
+                angular.forEach(JSONconfigs, function(resource) {
+                     var deferred  = $q.defer();
+
+                    $http.get('conf_' + resource + '.json')
+                    .success(function(response, status) {
+                        factory.CFG[resource] = response;
+                        deferred.resolve(status);
+                    })
+                    .error(function(response, status) {
+                        deferred.reject(status);
+                    });
+
+                    promises.push(deferred.promise);
+                });
+
+                return $q.all(promises);
+            };
+
+            factory.boot = function(appName) {
+
+                var myApp = angular.module(appName), 
+                    deferred  = $q.defer();
+
+                factory.loadConfig(appName)
+                .then(function() {
+                    myApp.constant('config', factory.CFG);
+                    deferred.resolve();
+                },
+                function() {
+                    deferred.reject();
+                });
+
+                return deferred.promise;
+            }
+
+            return factory;
+        }]);
+        
+        var bootContainer = document.createElement('div');
+
+        bootapp.run(function(bootFactory) {
+            bootFactory.boot('MyApp').then(function() {
+                bootContainer.remove();
+                myappRun();
+            });
+        });
+
+        angular.element(document).ready(function () {
+            angular.bootstrap(bootContainer, ["bootstrapper"]);
+        });
+    </script>
+</body>
+</html>
